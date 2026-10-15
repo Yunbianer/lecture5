@@ -57,6 +57,10 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # 改造二：声明资源目录，Image.asset 才能读到它
+  assets:
+    - assets/images/
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

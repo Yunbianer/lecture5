@@ -34,6 +34,33 @@ class _MyHomePageState extends State<MyHomePage> {
   // 改造一：当前步长，默认 1
   int _step = 1;
 
+  // ===== 改造二：生命周期日志，每个钩子一行 =====
+  // 用 debugPrint 而不是 print：输出到同一个控制台，但不会触发 avoid_print 规则
+  @override
+  void initState() {
+    super.initState();
+    debugPrint('[lifecycle] initState');
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    debugPrint('[lifecycle] didChangeDependencies');
+  }
+
+  @override
+  void didUpdateWidget(covariant MyHomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    debugPrint('[lifecycle] didUpdateWidget');
+  }
+
+  @override
+  void dispose() {
+    debugPrint('[lifecycle] dispose');
+    super.dispose();
+  }
+  // ============================================
+
   void _incrementCounter() {
     setState(() {
       _counter += _step;
@@ -67,16 +94,20 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('[lifecycle] build');
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        foregroundColor: Colors.white,
+        // 改造二：资源图片作为 AppBar 背景
+        flexibleSpace: Image.asset(
+          'assets/images/banner.png',
+          fit: BoxFit.cover,
+        ),
         title: Text(widget.title),
         actions: [
           TextButton(
             onPressed: _pickStep,
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
             child: Text('步长 $_step'),
           ),
         ],

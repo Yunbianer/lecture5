@@ -30,20 +30,66 @@ debugPrint('[lifecycle] build');                  // build（写在 build 里）
 - 之后的每次界面变化（比如点按钮、测试里的 tap），只重新执行 `build`，不会再走 `initState`；
 - State 被销毁时走 `dispose`，且只走一次。
 
-## 三、按 r / 按 R 的对照（自己在 `flutter run` 里跑一遍补实测）
+## 三、按 r / 按 R 的对照（2026-10-20 Chrome 实跑记录）
 
 先跑起来：
 
 ```
-flutter run -d chrome      # 或 -d windows
+flutter run -d chrome
 ```
 
-然后按小写 `r`（热重载）观察一次，再按大写 `R`（热重启）观察一次，把真实输出抄进进度报告。预期差异如下：
+### 启动后的初始输出
 
-- 按 `r`（热重载）：只会新增 `[lifecycle] build`。因为热重载保留 State，`initState` / `didChangeDependencies` / `didUpdateWidget` / `dispose` 都不会重新执行，计数器上的数字也不会归零。
-- 按 `R`（热重启）：会新增一整套 `[lifecycle] dispose` → `[lifecycle] initState` → `[lifecycle] didChangeDependencies` → `[lifecycle] build`。因为热重启销毁全部 State 再重建，计数器会归零。
-- 点一下 FAB：只会新增一次 `[lifecycle] build`（`setState` 标记 dirty → 下一帧重跑 build）。
-- 退出页面 / 关闭 App：出现 `[lifecycle] dispose`。
+```
+[lifecycle] initState
+[lifecycle] didChangeDependencies
+[lifecycle] build
+[lifecycle] build      ← 首帧后框架会额外触发几次 build
+[lifecycle] build
+[lifecycle] build
+```
+
+### 按小写 `r`（热重载）
+
+**实测输出（Chrome）**：
+
+```
+Performing hot restart...
+Hot restarting application from main method in: org-dartlang-app:///web_entrypoint.dart (generation: 1).
+Performing hot restart...                                          440ms
+Restarted application in 440ms.
+[lifecycle] initState
+[lifecycle] didChangeDependencies
+[lifecycle] build
+```
+
+⚠️ **重要发现**：在 Chrome（web）上按 `r` 实际触发的是**热重启**，不是热重载。web 端 Flutter 不支持保留 State 的热重载——整个 Dart VM 会重启，State 完整重建，计数器归零。这和桌面端 / 移动端的行为不同，需要切换到 Windows 桌面端（`flutter run -d windows`）才能观察真正的热重载。
+
+### 按大写 `R`（热重启）
+
+**实测输出（Chrome）**：与按 `r` 完全相同——同样的热重启日志，同样走 `initState` → `didChangeDependencies` → `build`。
+
+### 按 FAB 加一
+
+```
+[lifecycle] build    ← setState 标记 dirty → 下一帧重跑 build，没有任何其他钩子
+```
+
+计数器数字变了（0 → 1），但 State 对象没销毁重建，`_counter` 保留。
+
+### 关闭 App
+
+```
+[lifecycle] dispose
+Lost connection to device.
+```
+
+### 预期行为（桌面/移动端，供对照）
+
+真正的热重载（`r`）和热重启（`R`）的差异要在 Windows/Android/iOS 上才能观察到：
+
+- 按 `r`（热重载）：**只**新增 `[lifecycle] build`。State 保留，计数器不归零。
+- 按 `R`（热重启）：销毁旧 State → 新建 State，走完整 `dispose` → `initState` → `didChangeDependencies` → `build`。计数器归零。
 
 一句话记：改样式用 `r`（保留状态、只重跑 build），改初始化逻辑用 `R`（重置状态、重走全部钩子）。
 
